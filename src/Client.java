@@ -16,6 +16,7 @@ public class Client {
 		try {
 			Socket socket = new Socket("localhost", 1100);
 			PrintStream ps = new PrintStream(socket.getOutputStream());
+			ps.println("aegon");
 			ps.println("Hello to server");
 			
 			File path = new File("urls.txt");
