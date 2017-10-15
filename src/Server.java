@@ -36,10 +36,16 @@ public class Server {
 	public void run() {
 		try {
 			ServerSocket serverSocket = new ServerSocket(1100);
+			serverSocket.setSoTimeout(10000);
 			while (true){
 				Socket socket = serverSocket.accept();
-				handleConnection(socket);
-				System.out.println("Handled a connection");
+				try {
+					handleConnection(socket);
+					System.out.println("Handled a connection");
+				} catch (SocketTimeoutException ste){
+					System.out.println("Socket timed out!");
+					socket.close();
+				}
 			}
 			
 		} catch (Exception e){
@@ -81,7 +87,12 @@ public class Server {
 		PrintStream ps = new PrintStream(socket.getOutputStream());
 		ps.println(" Responding...");
 		for (String line = br.readLine(); line != null; line = br.readLine()){
-			if (line.equals("--endOfStream--")){
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			if (line.equals("--endOfStream--") || ps.checkError()){
 				ps.close();
 				break;
 			}
