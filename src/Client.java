@@ -1,5 +1,12 @@
 import java.io.*;
 import java.net.*;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.util.Arrays;
 
 public class Client {
 	
@@ -13,7 +20,18 @@ public class Client {
 	}
 	
 	public void run() {
+
 		try {
+			
+			KeyPairGenerator kpg = KeyPairGenerator.getInstance("DSA", "SUN");
+			SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
+			kpg.initialize(1024, random);
+			KeyPair pair = kpg.generateKeyPair();
+			PrivateKey privateKey = pair.getPrivate();
+			PublicKey publicKey = pair.getPublic();
+			System.out.println("secret" + Arrays.toString(privateKey.getEncoded()));
+			System.out.println("pkey" + Arrays.toString(publicKey.getEncoded()));
+			
 			Socket socket = new Socket("localhost", 1100);
 			PrintStream ps = new PrintStream(socket.getOutputStream());
 			ps.println("aegon");

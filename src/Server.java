@@ -36,8 +36,9 @@ public class Server {
 	public void run() {
 		try {
 			ServerSocket serverSocket = new ServerSocket(1100);
-			serverSocket.setSoTimeout(10000);
+			serverSocket.setSoTimeout(300000);
 			while (true){
+				
 				Socket socket = serverSocket.accept();
 				try {
 					handleConnection(socket);
