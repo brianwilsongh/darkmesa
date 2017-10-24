@@ -10,6 +10,11 @@ import java.util.Arrays;
 
 public class Client {
 	
+	OutputStream socketOutputStream;
+	InputStream socketInputStream;
+	
+	private PublicKey mServerPublicKey;
+	
 	public static void main(String[] args) {
 		Client client = new Client();
 		try {
@@ -23,16 +28,14 @@ public class Client {
 
 		try {
 			
-			KeyPairGenerator kpg = KeyPairGenerator.getInstance("DSA", "SUN");
-			SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
-			kpg.initialize(1024, random);
-			KeyPair pair = kpg.generateKeyPair();
-			PrivateKey privateKey = pair.getPrivate();
-			PublicKey publicKey = pair.getPublic();
-			System.out.println("secret" + Arrays.toString(privateKey.getEncoded()));
-			System.out.println("pkey" + Arrays.toString(publicKey.getEncoded()));
-			
 			Socket socket = new Socket("localhost", 1100);
+			socketOutputStream = socket.getOutputStream();
+			socketInputStream = socket.getInputStream();
+			
+			ObjectInputStream objectIn = new ObjectInputStream(socketInputStream);
+			mServerPublicKey = (PublicKey) objectIn.readObject();
+			System.out.println(mServerPublicKey);
+			
 			PrintStream ps = new PrintStream(socket.getOutputStream());
 			ps.println("aegon");
 			ps.println("Hello to server");
