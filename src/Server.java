@@ -16,151 +16,98 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-
 public class Server {
-	private static String[] passwords = new String[]{"hunter12", "javarules"};
-	private static Set<String> hashedPasswords = new HashSet<>();
-	
-	private static PrivateKey serverPrivateKey;
-	private static PublicKey serverPublicKey;
+	private static String[] passwords = new String[] { "hunter12", "javarules" };
+	public static Set<String> hashedPasswords = new HashSet<>();
 
-	public static void main(String[] args) throws NoSuchAlgorithmException {
-		
-		for (int idx = 0; idx < passwords.length; idx++){
-			hashedPasswords.add(hash(passwords[idx]));
-		}
-		
+	private PrivateKey serverPrivateKey;
+	private PublicKey serverPublicKey;
+	
+	private ServerSocket serverSocket; //this server socket
+
+	public static void main(String[] args) throws NoSuchAlgorithmException, NoSuchProviderException {
+
+		// try {
+		// //sample for encrypt/decrypt
+		// String data = "data to be encrypted";
+		// Cipher cipher = Cipher.getInstance("RSA");
+		// cipher.init(Cipher.ENCRYPT_MODE, serverPublicKey);
+		// byte[] encryptedData = cipher.doFinal(data.getBytes());
+		// System.out.println("Encrypted data is : " +
+		// Arrays.toString(encryptedData));
+		//
+		// Cipher decrypt=Cipher.getInstance("RSA");
+		// decrypt.init(Cipher.DECRYPT_MODE, serverPrivateKey);
+		// byte[] decryptedData = decrypt.doFinal(encryptedData);
+		// String decryptedString = new String(decryptedData);
+		// System.out.println("Decrypted data is : " + decryptedString);
+		// } catch (Exception e){
+		// e.printStackTrace();
+		// }
+
 		try {
-			//create key pair for the server
-			KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-			SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
-			kpg.initialize(1024, random); //initiate 
-			KeyPair keyPair = kpg.generateKeyPair();
-			serverPrivateKey = keyPair.getPrivate();
-			serverPublicKey = keyPair.getPublic();
-			
-			System.out.println("secret" + Arrays.toString(serverPrivateKey.getEncoded()));
-			System.out.println("pkey" + Arrays.toString(serverPublicKey.getEncoded()));
-			
-			//encrypt sample data
-			String data = "data to be encrypted";
-			Cipher cipher = Cipher.getInstance("RSA");
-			cipher.init(Cipher.ENCRYPT_MODE, serverPublicKey);
-			byte[] encryptedData = cipher.doFinal(data.getBytes());
-			System.out.println("Encrypted data is : " + Arrays.toString(encryptedData));
-			
-			
-			Cipher decrypt=Cipher.getInstance("RSA");
-			decrypt.init(Cipher.DECRYPT_MODE, serverPrivateKey);
-			byte[] decryptedData = decrypt.doFinal(encryptedData);
-			String decryptedString = new String(decryptedData);
-			System.out.println("Decrypted data is : " + decryptedString);
-			
-		} catch (Exception e){
-			e.printStackTrace();
-		}
-		
-		Server s = new Server();
-		try {
-			s.run();
-		} catch (Exception e){
+			new Server().run(4242);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 	}
-	
-	public void run() {
+
+	public Server() throws NoSuchAlgorithmException, NoSuchProviderException {
+		buildKeys(); // private and public
+		for (int idx = 0; idx < passwords.length; idx++) {
+			hashedPasswords.add(Utils.hash(passwords[idx])); // encrypt pws into set
+		}
+	}
+
+	public void run(int port) {
+		final ExecutorService processPool = Executors.newCachedThreadPool();
 		try {
-			ServerSocket serverSocket = new ServerSocket(1100);
+			serverSocket = new ServerSocket(port);
 			serverSocket.setSoTimeout(300000);
-			while (true){
-				
-				Socket socket = serverSocket.accept();
-				try {
-					handleConnection(socket);
-					System.out.println("Handled a connection");
-				} catch (SocketTimeoutException ste){
-					System.out.println("Socket timed out!");
-					socket.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+
+		Runnable serverTask = new Runnable() {
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				while (true) {
+					Socket thisSocket;
+					try {
+						thisSocket = serverSocket.accept();
+						processPool.submit(new ClientProcess(thisSocket, serverPublicKey, serverPrivateKey));
+						System.out.println("Submitted a connection to process pool");
+					} catch (Exception e) {
+						System.out.println("Socket timed out!");
+					}
 				}
 			}
-			
-		} catch (Exception e){
-			e.printStackTrace();
-		}
+		};
+		Thread listeningThread = new Thread(serverTask);
+		listeningThread.start();
 
 	}
-	
-	public void handleConnection(Socket socket) throws IOException, ClassNotFoundException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-		InputStreamReader isr = new InputStreamReader(socket.getInputStream());
-		BufferedReader br = new BufferedReader(isr);
-		
-		ObjectOutputStream objectOut = new ObjectOutputStream(socket.getOutputStream()); //make stream to write public key to client
-		objectOut.writeObject(serverPublicKey);
-		ObjectInputStream objectIn = new ObjectInputStream(socket.getInputStream());
-		String secret = decryptWithServerPrivate((byte[]) objectIn.readObject());
-		System.out.println("Server says secret is: " + secret);
-		
-		String sentPassword = br.readLine();
-		String encoded;
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			byte[] hash = digest.digest(sentPassword.getBytes(StandardCharsets.UTF_8));
-			encoded = Base64.getEncoder().encodeToString(hash);
-			if (!hashedPasswords.contains(encoded)){
-				System.out.print("BAD GUY!");
-				socket.close();
-				return;
-			}
-			
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		
 
-		
-		String message = br.readLine();
-		System.out.println("simple message: " + message);
-		System.out.println("from: " + socket.getInetAddress());
-		System.out.println("to: " + socket.getLocalSocketAddress());
-		System.out.println("hostname: " + socket.getLocalAddress().getHostName());
-		System.out.println("canonical host: " + socket.getLocalAddress().getCanonicalHostName());
-		
-		PrintStream ps = new PrintStream(socket.getOutputStream());
-		ps.println("Server is Responding...");
-		for (String line = br.readLine(); line != null; line = br.readLine()){
-			try {
-				Thread.sleep(200);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			if (line.equals("--endOfStream--") || ps.checkError()){
-				ps.close();
-				break;
-			}
-			ps.println("Server Output:" + line);
-		}
-		System.out.println("End of stream");
-		socket.close();
-	}
-	
-	private String decryptWithServerPrivate(byte[] data) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-		String decrypted = "";
-		Cipher decrypt=Cipher.getInstance("RSA");
-		decrypt.init(Cipher.DECRYPT_MODE, serverPrivateKey);
-		byte[] decryptedData = decrypt.doFinal(data);
-		decrypted = new String(decryptedData);
-		return decrypted;
-	}
-	
-	private static String hash(String string) throws NoSuchAlgorithmException{
-		return Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(string.getBytes(StandardCharsets.UTF_8)));
+	private void buildKeys() throws NoSuchAlgorithmException, NoSuchProviderException {
+		// create key pair for the server
+		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+		SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
+		kpg.initialize(1024, random); // initiate
+		KeyPair keyPair = kpg.generateKeyPair();
+		serverPrivateKey = keyPair.getPrivate();
+		serverPublicKey = keyPair.getPublic();
+		System.out.println("secret" + Arrays.toString(serverPrivateKey.getEncoded()));
+		System.out.println("pkey" + Arrays.toString(serverPublicKey.getEncoded()));
 	}
 
 }

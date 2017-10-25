@@ -37,7 +37,7 @@ public class Client {
 
 		try {
 			
-			Socket socket = new Socket("localhost", 1100);
+			Socket socket = new Socket("localhost", 4242);
 			socketOutputStream = socket.getOutputStream();
 			socketInputStream = socket.getInputStream();
 			
@@ -48,7 +48,8 @@ public class Client {
 			
 			
 			PrintStream ps = new PrintStream(socket.getOutputStream());
-			ps.println("aegon");
+			ps.println(Utils.hash("hunter12"));
+			System.out.println("Did we reach here?");
 			ps.println("Hello to server");
 			
 			File path = new File("urls.txt");
@@ -85,10 +86,6 @@ public class Client {
 		cipher.init(Cipher.ENCRYPT_MODE, mServerPublicKey);
 		byte[] encryptedData = cipher.doFinal(data.getBytes());
 		return encryptedData;
-	}
-	
-	private String hash(String string) throws NoSuchAlgorithmException{
-		return Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(string.getBytes(StandardCharsets.UTF_8)));
 	}
 
 }
