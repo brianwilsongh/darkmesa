@@ -69,7 +69,7 @@ public class Server {
 	}
 
 	public void run(int port) {
-		final ExecutorService processPool = Executors.newCachedThreadPool();
+		final ExecutorService processPool = Executors.newFixedThreadPool(10);
 		try {
 			serverSocket = new ServerSocket(port);
 			serverSocket.setSoTimeout(300000);

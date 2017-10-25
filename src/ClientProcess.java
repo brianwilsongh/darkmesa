@@ -39,13 +39,11 @@ public class ClientProcess implements Runnable {
 			ObjectOutputStream objectOut = new ObjectOutputStream(socket.getOutputStream());
 			objectOut.writeObject(serverPublicKey);
 			ObjectInputStream objectIn = new ObjectInputStream(socket.getInputStream());
-			String secret = decryptWithServerPrivate((byte[]) objectIn.readObject());
-			System.out.println("Server says secret is: " + secret);
+			String decryptedPassword = decryptWithServerPrivate((byte[]) objectIn.readObject());
+			System.out.println("receive password: " + decryptedPassword);
 
-			String sentPassword = br.readLine();
-
-			if (!Server.hashedPasswords.contains(sentPassword)){
-				System.out.println("BAD GUY with pw: " + sentPassword);
+			if (!Server.hashedPasswords.contains(decryptedPassword)){
+				System.out.println("BAD GUY with pw: " + decryptedPassword);
 				br.close();
 				socket.close();
 				return;

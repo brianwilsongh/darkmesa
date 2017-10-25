@@ -44,13 +44,7 @@ public class Client {
 			ObjectInputStream objectIn = new ObjectInputStream(socketInputStream);
 			mServerPublicKey = (PublicKey) objectIn.readObject();
 			ObjectOutputStream objectOut = new ObjectOutputStream(socketOutputStream);
-			objectOut.writeObject(encryptWithServerPublic("Secret message from client"));
-			
-			
-			PrintStream ps = new PrintStream(socket.getOutputStream());
-			ps.println(Utils.hash("hunter12"));
-			System.out.println("Did we reach here?");
-			ps.println("Hello to server");
+			objectOut.writeObject(encryptWithServerPublic(Utils.hash("hunter12")));
 			
 			File path = new File("urls.txt");
 			
@@ -58,7 +52,7 @@ public class Client {
 				System.out.println("ERROR FINDING THE FILE");
 				return;
 			}
-			
+			PrintStream ps = new PrintStream(socket.getOutputStream());
 			InputStreamReader fileIsr = new InputStreamReader(new FileInputStream(path));
 			BufferedReader fileBr = new BufferedReader(fileIsr);
 			
