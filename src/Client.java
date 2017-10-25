@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -7,6 +8,11 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.Arrays;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 public class Client {
 	
@@ -34,7 +40,9 @@ public class Client {
 			
 			ObjectInputStream objectIn = new ObjectInputStream(socketInputStream);
 			mServerPublicKey = (PublicKey) objectIn.readObject();
-			System.out.println(mServerPublicKey);
+			ObjectOutputStream objectOut = new ObjectOutputStream(socketOutputStream);
+			objectOut.writeObject(encryptWithServerPublic("Secret message from client"));
+			
 			
 			PrintStream ps = new PrintStream(socket.getOutputStream());
 			ps.println("aegon");
@@ -68,6 +76,13 @@ public class Client {
 			e.printStackTrace();
 		}
 
+	}
+	
+	private byte[] encryptWithServerPublic(String data) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+		Cipher cipher = Cipher.getInstance("RSA");
+		cipher.init(Cipher.ENCRYPT_MODE, mServerPublicKey);
+		byte[] encryptedData = cipher.doFinal(data.getBytes());
+		return encryptedData;
 	}
 
 }

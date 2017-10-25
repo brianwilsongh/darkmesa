@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -16,7 +17,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 
 public class Server {
@@ -98,12 +102,15 @@ public class Server {
 
 	}
 	
-	public static void handleConnection(Socket socket) throws IOException{
+	public void handleConnection(Socket socket) throws IOException, ClassNotFoundException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 		InputStreamReader isr = new InputStreamReader(socket.getInputStream());
 		BufferedReader br = new BufferedReader(isr);
 		
 		ObjectOutputStream objectOut = new ObjectOutputStream(socket.getOutputStream()); //make stream to write public key to client
 		objectOut.writeObject(serverPublicKey);
+		ObjectInputStream objectIn = new ObjectInputStream(socket.getInputStream());
+		String secret = decryptWithServerPrivate((byte[]) objectIn.readObject());
+		System.out.println("Server says secret is: " + secret);
 		
 		String sentPassword = br.readLine();
 		String encoded;
@@ -146,6 +153,15 @@ public class Server {
 		}
 		System.out.println("End of stream");
 		socket.close();
+	}
+	
+	private String decryptWithServerPrivate(byte[] data) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+		String decrypted = "";
+		Cipher decrypt=Cipher.getInstance("RSA");
+		decrypt.init(Cipher.DECRYPT_MODE, serverPrivateKey);
+		byte[] decryptedData = decrypt.doFinal(data);
+		decrypted = new String(decryptedData);
+		return decrypted;
 	}
 
 }
