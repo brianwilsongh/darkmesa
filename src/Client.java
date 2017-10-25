@@ -1,13 +1,16 @@
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Base64;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -58,11 +61,10 @@ public class Client {
 			InputStreamReader fileIsr = new InputStreamReader(new FileInputStream(path));
 			BufferedReader fileBr = new BufferedReader(fileIsr);
 			
-			boolean fileBrFinished = false;
 			for (String line = fileBr.readLine(); line != null; line = fileBr.readLine()){
 				ps.println(line);
 			}
-			ps.println("--endOfStream--");
+			ps.println("--endOfStream--"); //special line to inform server to start processing
 			fileBr.close();
 			
 			InputStreamReader isr = new InputStreamReader(socket.getInputStream()); //get IS of socket, not file
@@ -83,6 +85,10 @@ public class Client {
 		cipher.init(Cipher.ENCRYPT_MODE, mServerPublicKey);
 		byte[] encryptedData = cipher.doFinal(data.getBytes());
 		return encryptedData;
+	}
+	
+	private String hash(String string) throws NoSuchAlgorithmException{
+		return Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(string.getBytes(StandardCharsets.UTF_8)));
 	}
 
 }

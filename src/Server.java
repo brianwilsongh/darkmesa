@@ -24,21 +24,16 @@ import javax.crypto.NoSuchPaddingException;
 
 
 public class Server {
-	private static String[] passwords = new String[]{"aegon", "tirion"};
-	private static Set<String> shaCodes = new HashSet<>();
+	private static String[] passwords = new String[]{"hunter12", "javarules"};
+	private static Set<String> hashedPasswords = new HashSet<>();
 	
 	private static PrivateKey serverPrivateKey;
 	private static PublicKey serverPublicKey;
 
 	public static void main(String[] args) throws NoSuchAlgorithmException {
 		
-		MessageDigest digest = MessageDigest.getInstance("SHA-256");
 		for (int idx = 0; idx < passwords.length; idx++){
-			String password = passwords[idx];
-			byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
-			String encoded = Base64.getEncoder().encodeToString(hash);
-			System.out.println("Encoded: " + encoded);
-			shaCodes.add(encoded);
+			hashedPasswords.add(hash(passwords[idx]));
 		}
 		
 		try {
@@ -118,7 +113,7 @@ public class Server {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			byte[] hash = digest.digest(sentPassword.getBytes(StandardCharsets.UTF_8));
 			encoded = Base64.getEncoder().encodeToString(hash);
-			if (!shaCodes.contains(encoded)){
+			if (!hashedPasswords.contains(encoded)){
 				System.out.print("BAD GUY!");
 				socket.close();
 				return;
@@ -131,17 +126,17 @@ public class Server {
 
 		
 		String message = br.readLine();
-		System.out.println("message: " + message);
+		System.out.println("simple message: " + message);
 		System.out.println("from: " + socket.getInetAddress());
 		System.out.println("to: " + socket.getLocalSocketAddress());
 		System.out.println("hostname: " + socket.getLocalAddress().getHostName());
 		System.out.println("canonical host: " + socket.getLocalAddress().getCanonicalHostName());
 		
 		PrintStream ps = new PrintStream(socket.getOutputStream());
-		ps.println(" Responding...");
+		ps.println("Server is Responding...");
 		for (String line = br.readLine(); line != null; line = br.readLine()){
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(200);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -149,7 +144,7 @@ public class Server {
 				ps.close();
 				break;
 			}
-			ps.println("SERVER:" + line);
+			ps.println("Server Output:" + line);
 		}
 		System.out.println("End of stream");
 		socket.close();
@@ -162,6 +157,10 @@ public class Server {
 		byte[] decryptedData = decrypt.doFinal(data);
 		decrypted = new String(decryptedData);
 		return decrypted;
+	}
+	
+	private static String hash(String string) throws NoSuchAlgorithmException{
+		return Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(string.getBytes(StandardCharsets.UTF_8)));
 	}
 
 }
